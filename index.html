@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리 학교 급식 요정 🍱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #4a4a4a;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .cute-input {
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 12px 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .cute-input:focus {
+            border-color: #a6c1ee;
+            box-shadow: 0 0 0 3px rgba(166, 193, 238, 0.3);
+        }
+        .cute-btn {
+            background: linear-gradient(120deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        .cute-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255, 154, 158, 0.4);
+        }
+        .cute-btn:active {
+            transform: translateY(0);
+        }
+        .school-list-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .school-list-item:hover {
+            background: #fdf2f8;
+            border-radius: 8px;
+        }
+        .meal-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+        .meal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #ff9a9e, #a6c1ee);
+        }
+        .dish-text {
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+        .allergy-info {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div class="glass-panel w-full max-w-md p-6 mt-8">
+        <h1 class="text-3xl text-center mb-6" style="color: #6b7280;">🍱 우리 학교 급식 요정 🧚‍♀️</h1>
+
+        <!-- 학교 검색 섹션 -->
+        <div class="mb-6">
+            <label class="block text-sm text-gray-500 mb-2">🏫 학교를 검색해봐!</label>
+            <div class="flex gap-2 relative">
+                <input type="text" id="schoolSearchInput" class="cute-input w-full text-lg" placeholder="예: 제주영지학교" onkeypress="if(event.keyCode==13) searchSchool()">
+                <button onclick="searchSchool()" class="cute-btn text-lg whitespace-nowrap">검색🔍</button>
+            </div>
+            
+            <!-- 학교 검색 결과 리스트 -->
+            <div id="schoolList" class="mt-2 max-h-48 overflow-y-auto bg-white rounded-xl shadow-inner hidden">
+                <!-- 결과가 여기에 추가됩니다 -->
+            </div>
+        </div>
+
+        <!-- 선택된 학교 표시 -->
+        <div id="selectedSchoolInfo" class="hidden mb-6 p-4 bg-blue-50 rounded-xl text-center text-blue-400 border border-blue-100">
+            <span id="selectedSchoolName" class="text-xl"></span> 이(가) 선택됐어! ✨
+        </div>
+
+        <!-- 날짜 선택 섹션 -->
+        <div class="mb-6">
+            <label class="block text-sm text-gray-500 mb-2">📅 언제 급식이 궁금해?</label>
+            <input type="date" id="datePicker" class="cute-input w-full text-lg text-center" onchange="fetchMealData()">
+        </div>
+
+        <!-- 급식 결과 영역 -->
+        <div id="mealResultArea" class="mt-4">
+            <div class="text-center text-gray-400 py-8">
+                학교를 검색하고 선택하면<br>맛있는 식단표가 나올 거야! 😋
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수: 선택된 학교 정보 저장
+        let currentEduCode = '';
+        let currentSchoolCode = '';
+
+        // 초기화: 오늘 날짜 설정
+        window.onload = () => {
+            const today = new Date();
+            // 한국 시간(KST) 기준으로 날짜 맞추기
+            const offset = today.getTimezoneOffset() * 60000;
+            const dateOffset = new Date(today.getTime() - offset);
+            const todayString = dateOffset.toISOString().split('T')[0];
+            document.getElementById('datePicker').value = todayString;
+        };
+
+        // 1. 학교 검색 API 호출 (XML 파싱)
+        function searchSchool() {
+            const keyword = document.getElementById('schoolSearchInput').value.trim();
+            if (!keyword) {
+                alert('학교 이름을 입력해줘! 🥺');
+                return;
+            }
+
+            const schoolListEl = document.getElementById('schoolList');
+            schoolListEl.innerHTML = '<div class="p-4 text-center text-gray-400">검색 중... 🚀</div>';
+            schoolListEl.classList.remove('hidden');
+
+            // 학교 기본정보 API 엔드포인트
+            const url = `https://open.neis.go.kr/hub/schoolInfo?SCHUL_NM=${encodeURIComponent(keyword)}`;
+
+            fetch(url)
+                .then(response => response.text())
+                .then(str => new window.DOMParser().parseFromString(str, "text/xml"))
+                .then(data => {
+                    const rows = data.getElementsByTagName('row');
+                    schoolListEl.innerHTML = ''; // 초기화
+
+                    if (rows.length === 0) {
+                        schoolListEl.innerHTML = '<div class="p-4 text-center text-gray-400">학교를 찾을 수 없어... 다시 확인해줄래? 😥</div>';
+                        return;
+                    }
+
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        const eduCode = row.getElementsByTagName('ATPT_OFCDC_SC_CODE')[0].textContent;
+                        const schoolCode = row.getElementsByTagName('SD_SCHUL_CODE')[0].textContent;
+                        const schoolName = row.getElementsByTagName('SCHUL_NM')[0].textContent;
+                        const address = row.getElementsByTagName('ORG_RDNMA')[0]?.textContent || '';
+
+                        const div = document.createElement('div');
+                        div.className = 'school-list-item';
+                        div.innerHTML = `
+                            <div class="text-lg text-gray-700">${schoolName}</div>
+                            <div class="text-xs text-gray-400">${address}</div>
+                        `;
+                        div.onclick = () => selectSchool(eduCode, schoolCode, schoolName);
+                        schoolListEl.appendChild(div);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching school data:', error);
+                    schoolListEl.innerHTML = '<div class="p-4 text-center text-red-400">데이터를 불러오는데 실패했어 😭</div>';
+                });
+        }
+
+        // 2. 학교 선택 시 처리
+        function selectSchool(eduCode, schoolCode, schoolName) {
+            currentEduCode = eduCode;
+            currentSchoolCode = schoolCode;
+            
+            document.getElementById('selectedSchoolName').textContent = schoolName;
+            document.getElementById('selectedSchoolInfo').classList.remove('hidden');
+            
+            // 검색 리스트 숨기기 및 입력창 비우기
+            document.getElementById('schoolList').classList.add('hidden');
+            document.getElementById('schoolSearchInput').value = '';
+
+            // 급식 데이터 바로 가져오기
+            fetchMealData();
+        }
+
+        // 3. 급식 식단 API 호출 및 결과 출력 (XML 파싱)
+        function fetchMealData() {
+            if (!currentEduCode || !currentSchoolCode) {
+                return; // 학교가 아직 선택되지 않음
+            }
+
+            const dateStr = document.getElementById('datePicker').value;
+            const formattedDate = dateStr.replace(/-/g, ''); // 2022-03-01 -> 20220301 형식으로 변환
+
+            const resultArea = document.getElementById('mealResultArea');
+            resultArea.innerHTML = '<div class="text-center text-gray-400 py-8">맛있는 메뉴를 가져오는 중... 🍳</div>';
+
+            const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?ATPT_OFCDC_SC_CODE=${currentEduCode}&SD_SCHUL_CODE=${currentSchoolCode}&MLSV_YMD=${formattedDate}`;
+
+            fetch(url)
+                .then(response => response.text())
+                .then(str => new window.DOMParser().parseFromString(str, "text/xml"))
+                .then(data => {
+                    const resultArea = document.getElementById('mealResultArea');
+                    resultArea.innerHTML = '';
+
+                    const rows = data.getElementsByTagName('row');
+
+                    if (rows.length === 0) {
+                        resultArea.innerHTML = `
+                            <div class="meal-card text-center text-gray-500 py-8">
+                                <div class="text-4xl mb-2">🍽️</div>
+                                선택한 날짜에는 급식 정보가 없네...<br>쉬는 날이거나 아직 안 올라왔나 봐!
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // 조식, 중식, 석식 등 여러 개일 수 있으므로 반복문 처리
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        const mealName = row.getElementsByTagName('MMEAL_SC_NM')[0].textContent; // 조식, 중식 등
+                        let dishRaw = row.getElementsByTagName('DDISH_NM')[0].textContent; // 메뉴
+                        const calInfo = row.getElementsByTagName('CAL_INFO')[0].textContent; // 칼로리
+
+                        // <br/> 태그 처리 및 알레르기 정보 스타일링
+                        // CDATA 안에 들어있는 <br/>을 실제 html <br>로 치환
+                        dishRaw = dishRaw.replace(/<br\s*\/?>/gi, '<br>');
+                        
+                        // 숫자.숫자. 형태의 알레르기 정보를 작고 흐리게 보이도록 변환
+                        const formattedDish = dishRaw.replace(/([0-9]+\.)+/g, match => `<span class="allergy-info ml-1">${match}</span>`);
+
+                        const card = document.createElement('div');
+                        card.className = 'meal-card';
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                <h2 class="text-2xl text-pink-500">${mealName} 💖</h2>
+                                <span class="bg-blue-100 text-blue-500 text-sm px-3 py-1 rounded-full">${calInfo}</span>
+                            </div>
+                            <div class="dish-text text-gray-700">
+                                ${formattedDish}
+                            </div>
+                        `;
+                        resultArea.appendChild(card);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching meal data:', error);
+                    document.getElementById('mealResultArea').innerHTML = `
+                        <div class="meal-card text-center text-red-400 py-8">
+                            정보를 가져오는 중 문제가 발생했어. 나중에 다시 시도해줘! 😭
+                        </div>
+                    `;
+                });
+        }
+    </script>
+</body>
+</html>
